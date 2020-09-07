@@ -1,0 +1,14 @@
+# Dependency directories
+node_modules/
+
+# Storage
+
+pdf/
+
+# Database
+
+database/
+
+# Environment Variables
+
+.env

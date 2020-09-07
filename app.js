@@ -67,62 +67,71 @@ async function fetchReports() {
             let info = `Relatório de Situação nº ${number} - ${date}`;
             let pdf_path = `pdf/situation-report-${number}.pdf`;
             let pdf = fs.createWriteStream(pdf_path);
-            let pdf_response = await axios({
-                method: "get",
-                url: href,
-                responseType: "stream"
-            });
-            pdf_response.data.pipe(pdf);
-            const complete_download = new Promise(function (resolve, reject) {
-                pdf.on('finish', resolve);
-                pdf.on('error', reject);
-            });
-            await complete_download;
-            const md5 = await getMD5(pdf_path);
-            if (!(number in situation_reports)) {
+            try {
+                let pdf_response = await axios({
+                    method: "get",
+                    url: href,
+                    responseType: "stream"
+                });
+                pdf_response.data.pipe(pdf);
+                const complete_download = new Promise(function (resolve, reject) {
+                    pdf.on('finish', resolve);
+                    pdf.on('error', reject);
+                });
+                await complete_download;
+                const md5 = await getMD5(pdf_path);
+                if (!(number in situation_reports)) {
+                    situation_reports[number] = {
+                        md5,
+                        date,
+                        ts: ""
+                    };
+                    if (slack_enabled) {
+                        const result = await web.chat.postMessage({
+                            text: info,
+                            channel: process.env.SLACK_CHANNEL,
+                        });
+                        situation_reports[number].ts = result.message.ts;
+                        const upload_res = await web.files.upload({
+                            channels: process.env.SLACK_CHANNEL,
+                            filename: `RelatorioSituacao${number}.pdf`,
+                            file: fs.createReadStream(pdf_path),
+                            filetype: "pdf",
+                            thread_ts: situation_reports[number].ts
+                        });
+                    }
+                } else {
+                    if (situation_reports[number].md5 != md5) {
+                        situation_reports[number].date = date;
+                        situation_reports[number].md5 = md5;
+                        if (slack_enabled) {
+                            if (situation_reports[number].ts === "") {
+                                const result = await web.chat.postMessage({
+                                    text: info,
+                                    channel: process.env.SLACK_CHANNEL,
+                                });
+                            } else {
+                                const upload_res = await web.files.upload({
+                                    channels: process.env.SLACK_CHANNEL,
+                                    filename: `RelatorioSituacao${number}.pdf`,
+                                    file: fs.createReadStream(pdf_path),
+                                    filetype: "pdf",
+                                    thread_ts: situation_reports[number].ts
+                                });
+                            }
+                        }
+                    } else {
+                        continue;
+                    }
+                }
+            }
+            catch(exception) {
                 situation_reports[number] = {
-                    md5,
+                    md5: "",
                     date,
                     ts: ""
                 };
-                if (slack_enabled) {
-                    const result = await web.chat.postMessage({
-                        text: info,
-                        channel: process.env.SLACK_CHANNEL,
-                    });
-                    situation_reports[number].ts = result.message.ts;
-                    const upload_res = await web.files.upload({
-                        channels: process.env.SLACK_CHANNEL,
-                        filename: `RelatorioSituacao${number}.pdf`,
-                        file: fs.createReadStream(pdf_path),
-                        filetype: "pdf",
-                        thread_ts: situation_reports[number].ts
-                    });
-                }
-            } else {
-                if (situation_reports[number].md5 != md5) {
-                    situation_reports[number].date = date;
-                    situation_reports[number].md5 = md5;
-                    if (slack_enabled) {
-                        if (situation_reports[number].ts === "") {
-                            const result = await web.chat.postMessage({
-                                text: info,
-                                channel: process.env.SLACK_CHANNEL,
-                            });
-                        } else {
-                            const upload_res = await web.files.upload({
-                                channels: process.env.SLACK_CHANNEL,
-                                filename: `RelatorioSituacao${number}.pdf`,
-                                file: fs.createReadStream(pdf_path),
-                                filetype: "pdf",
-                                thread_ts: situation_reports[number].ts
-                            });
-                        }
-                    }
-                } else {
-                    continue;
-                }
-            }
+            }            
             saveFiles();
         }
     };

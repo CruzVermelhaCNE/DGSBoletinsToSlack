@@ -136,7 +136,7 @@ async function fetchReports() {
             saveFiles();
         }
     };
+    setTimeout(fetchReports, process.env.LOOP_TIME);
 }
 
 fetchReports();
-setInterval(fetchReports, process.env.LOOP_TIME);

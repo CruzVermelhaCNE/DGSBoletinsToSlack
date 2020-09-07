@@ -65,6 +65,7 @@ async function fetchReports() {
             // Situation Report
             number = number[1];
             let info = `Relatório de Situação nº ${number} - ${date}`;
+            console.log(info);
             let pdf_path = `pdf/situation-report-${number}.pdf`;
             let pdf = fs.createWriteStream(pdf_path);
             try {

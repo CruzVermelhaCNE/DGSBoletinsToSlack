@@ -129,4 +129,4 @@ async function fetchReports() {
 }
 
 fetchReports();
-setInterval(fetchReports, 30 * 60000);
+setInterval(fetchReports, process.env.LOOP_TIME);

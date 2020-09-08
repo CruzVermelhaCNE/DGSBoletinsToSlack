@@ -106,38 +106,27 @@ async function fetchReports() {
                         situation_reports[number].date = date;
                         situation_reports[number].md5 = md5;
                         if (slack_enabled) {
-                            if (situation_reports[number].ts === "") {
-                                const result = await web.chat.postMessage({
-                                    text: info,
-                                    channel: process.env.SLACK_CHANNEL,
+                            if (situation_reports[number].ts !== "") {
+                                const upload_res = await web.files.upload({
+                                    channels: process.env.SLACK_CHANNEL,
+                                    filename: `RelatorioSituacao${number}.pdf`,
+                                    file: fs.createReadStream(pdf_path),
+                                    filetype: "pdf",
+                                    thread_ts: situation_reports[number].ts
                                 });
-                                situation_reports[number].ts = result.message.ts;
-                            } 
-                            const upload_res = await web.files.upload({
-                                channels: process.env.SLACK_CHANNEL,
-                                filename: `RelatorioSituacao${number}.pdf`,
-                                 file: fs.createReadStream(pdf_path),
-                                filetype: "pdf",
-                                thread_ts: situation_reports[number].ts
-                            });
-                            const notification_res = await web.chat.postMessage({
-                                text: "@channel Relatório Atualizado",
-                                channel: process.env.SLACK_CHANNEL,
-                                thread_ts: situation_reports[number].ts
-                            });
+                            }
                         }
                     } else {
                         continue;
                     }
                 }
-            }
-            catch(exception) {
+            } catch (exception) {
                 situation_reports[number] = {
                     md5: "",
                     date,
                     ts: ""
                 };
-            }            
+            }
             saveFiles();
         }
     };
